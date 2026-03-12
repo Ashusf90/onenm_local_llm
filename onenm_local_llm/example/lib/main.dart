@@ -14,42 +14,49 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  String _nativeMessage = 'Waiting...';
-  final _onenmLocalLlmPlugin = OnenmLocalLlm();
+  String _message = 'Waiting...';
+  final _plugin = OnenmLocalLlm();
 
   @override
   void initState() {
     super.initState();
-    initNative();
+    testNative();
   }
 
-  Future<void> initNative() async {
+  Future<void> testNative() async {
     String message;
 
     try {
-      message = await _onenmLocalLlmPlugin.pingNative() ?? "No response";
-    } on PlatformException {
-      message = "Failed to call native code.";
+      final loaded = await _plugin.loadModel("/fake/path/model.gguf");
+      final generated = await _plugin.generate("Hello model");
+
+      message = "loadModel: $loaded\ngenerate: $generated";
+    } on PlatformException catch (e) {
+      message = "Error: ${e.message}";
     }
 
     if (!mounted) return;
 
     setState(() {
-      _nativeMessage = message;
+      _message = message;
     });
+  }
+
+  @override
+  void dispose() {
+    _plugin.releaseModel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
-        appBar: AppBar(
-          title: const Text('1nm Plugin Test'),
-        ),
+        appBar: AppBar(title: const Text('1nm Test')),
         body: Center(
           child: Text(
-            _nativeMessage,
-            style: const TextStyle(fontSize: 18),
+            _message,
+            textAlign: TextAlign.center,
           ),
         ),
       ),

@@ -5,7 +5,6 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
-import com.example.onenm_local_llm.OneNmNative
 
 class OnenmLocalLlmPlugin: FlutterPlugin, MethodCallHandler {
   private lateinit var channel: MethodChannel
@@ -19,6 +18,30 @@ class OnenmLocalLlmPlugin: FlutterPlugin, MethodCallHandler {
   override fun onMethodCall(call: MethodCall, result: Result) {
     when (call.method) {
       "pingNative" -> result.success(native.ping())
+
+      "loadModel" -> {
+        val modelPath = call.argument<String>("modelPath")
+        if (modelPath == null) {
+          result.error("INVALID_ARGUMENT", "modelPath is required", null)
+        } else {
+          result.success(native.loadModel(modelPath))
+        }
+      }
+
+      "generate" -> {
+        val prompt = call.argument<String>("prompt")
+        if (prompt == null) {
+          result.error("INVALID_ARGUMENT", "prompt is required", null)
+        } else {
+          result.success(native.generate(prompt))
+        }
+      }
+
+      "releaseModel" -> {
+        native.releaseModel()
+        result.success(null)
+      }
+
       else -> result.notImplemented()
     }
   }

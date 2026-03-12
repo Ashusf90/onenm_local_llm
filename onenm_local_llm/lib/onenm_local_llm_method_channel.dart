@@ -9,7 +9,27 @@ class MethodChannelOnenmLocalLlm extends OnenmLocalLlmPlatform {
 
   @override
   Future<String?> pingNative() async {
-    final version = await methodChannel.invokeMethod<String>('pingNative');
-    return version;
+    return await methodChannel.invokeMethod<String>('pingNative');
+  }
+
+  @override
+  Future<bool?> loadModel(String modelPath) async {
+    return await methodChannel.invokeMethod<bool>(
+      'loadModel',
+      {'modelPath': modelPath},
+    );
+  }
+
+  @override
+  Future<String?> generate(String prompt) async {
+    return await methodChannel.invokeMethod<String>(
+      'generate',
+      {'prompt': prompt},
+    );
+  }
+
+  @override
+  Future<void> releaseModel() async {
+    await methodChannel.invokeMethod('releaseModel');
   }
 }

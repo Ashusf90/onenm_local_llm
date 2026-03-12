@@ -19,4 +19,16 @@ abstract class OnenmLocalLlmPlatform extends PlatformInterface {
   Future<String?> pingNative() {
     throw UnimplementedError('pingNative() has not been implemented.');
   }
+
+  Future<bool?> loadModel(String modelPath) {
+    throw UnimplementedError('loadModel() has not been implemented.');
+  }
+
+  Future<String?> generate(String prompt) {
+    throw UnimplementedError('generate() has not been implemented.');
+  }
+
+  Future<void> releaseModel() {
+    throw UnimplementedError('releaseModel() has not been implemented.');
+  }
 }
