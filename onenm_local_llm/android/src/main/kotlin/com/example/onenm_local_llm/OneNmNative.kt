@@ -1,8 +1,7 @@
 package com.example.onenm_local_llm
 
 class OneNmNative {
-    external fun ping(): String
-    external fun loadModel(modelPath: String): Boolean
+    external fun loadModel(modelPath: String, nativeLibDir: String): Boolean
     external fun generate(prompt: String): String
     external fun releaseModel()
 

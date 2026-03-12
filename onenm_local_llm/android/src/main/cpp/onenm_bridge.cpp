@@ -1,50 +1,193 @@
 #include <jni.h>
 #include <string>
+#include <vector>
+#include <android/log.h>
 
-extern "C"
-JNIEXPORT jstring JNICALL
-Java_com_example_onenm_1local_1llm_OneNmNative_ping(
-    JNIEnv* env,
-    jobject thiz
-) {
-    std::string msg = "Native bridge is working";
-    return env->NewStringUTF(msg.c_str());
+#include "llama.h"
+#include "ggml.h"
+#include "ggml-backend.h"
+
+#define TAG "1nm_bridge"
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
+#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
+
+static void llama_log_callback(enum ggml_log_level level, const char * text, void * user_data) {
+    int prio = ANDROID_LOG_INFO;
+    if (level == GGML_LOG_LEVEL_ERROR) prio = ANDROID_LOG_ERROR;
+    else if (level == GGML_LOG_LEVEL_WARN) prio = ANDROID_LOG_WARN;
+    else if (level == GGML_LOG_LEVEL_DEBUG) prio = ANDROID_LOG_DEBUG;
+    __android_log_print(prio, "llama.cpp", "%s", text);
 }
+
+static llama_model * model = nullptr;
+static llama_context * ctx = nullptr;
 
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_com_example_onenm_1local_1llm_OneNmNative_loadModel(
-    JNIEnv* env,
-    jobject thiz,
-    jstring modelPath
-) {
-    const char* path = env->GetStringUTFChars(modelPath, nullptr);
+        JNIEnv * env,
+        jobject thiz,
+        jstring modelPath,
+        jstring nativeLibDir) {
 
-    bool ok = true;
+    const char * path = env->GetStringUTFChars(modelPath, nullptr);
+    const char * lib_dir = env->GetStringUTFChars(nativeLibDir, nullptr);
+    LOGI("loadModel called with path: %s", path);
+    LOGI("Native lib dir: %s", lib_dir);
+
+    // Check if file is accessible
+    FILE * f = fopen(path, "rb");
+    if (!f) {
+        LOGE("Cannot open file: %s", path);
+        env->ReleaseStringUTFChars(modelPath, path);
+        env->ReleaseStringUTFChars(nativeLibDir, lib_dir);
+        return JNI_FALSE;
+    }
+    fseek(f, 0, SEEK_END);
+    long size = ftell(f);
+    fclose(f);
+    LOGI("File size: %ld bytes", size);
+
+    LOGI("Initializing llama backend...");
+    llama_log_set(llama_log_callback, nullptr);
+    ggml_backend_load_all_from_path(lib_dir);
+    LOGI("Backends loaded: %zu", ggml_backend_reg_count());
+    llama_backend_init();
+    env->ReleaseStringUTFChars(nativeLibDir, lib_dir);
+
+    LOGI("Loading model from file...");
+    llama_model_params model_params = llama_model_default_params();
+    model = llama_model_load_from_file(path, model_params);
+
+    if (!model) {
+        LOGE("Failed to load model from: %s", path);
+        env->ReleaseStringUTFChars(modelPath, path);
+        return JNI_FALSE;
+    }
+    LOGI("Model loaded successfully");
+
+    LOGI("Creating context...");
+    llama_context_params ctx_params = llama_context_default_params();
+    ctx = llama_init_from_model(model, ctx_params);
 
     env->ReleaseStringUTFChars(modelPath, path);
-    return ok ? JNI_TRUE : JNI_FALSE;
+
+    if (ctx) {
+        LOGI("Context created successfully");
+    } else {
+        LOGE("Failed to create context");
+    }
+
+    return ctx != nullptr ? JNI_TRUE : JNI_FALSE;
 }
 
 extern "C"
 JNIEXPORT jstring JNICALL
 Java_com_example_onenm_1local_1llm_OneNmNative_generate(
-    JNIEnv* env,
-    jobject thiz,
-    jstring prompt
-) {
-    const char* promptChars = env->GetStringUTFChars(prompt, nullptr);
+        JNIEnv * env,
+        jobject thiz,
+        jstring prompt) {
 
-    std::string response = std::string("Stub response for: ") + promptChars;
+    if (!ctx || !model) {
+        return env->NewStringUTF("Model not loaded");
+    }
 
-    env->ReleaseStringUTFChars(prompt, promptChars);
-    return env->NewStringUTF(response.c_str());
+    const char * prompt_chars = env->GetStringUTFChars(prompt, nullptr);
+    std::string prompt_str(prompt_chars);
+    LOGI("generate called with prompt: %s", prompt_chars);
+
+    const llama_vocab * vocab = llama_model_get_vocab(model);
+
+    // Tokenize the prompt
+    int n = prompt_str.size() + 128;
+    std::vector<llama_token> tokens(n);
+
+    int token_count = llama_tokenize(
+            vocab,
+            prompt_str.c_str(),
+            prompt_str.length(),
+            tokens.data(),
+            tokens.size(),
+            true,
+            true);
+
+    tokens.resize(token_count);
+    LOGI("Tokenized prompt: %d tokens", token_count);
+
+    // Decode the prompt
+    llama_batch batch = llama_batch_get_one(tokens.data(), tokens.size());
+    if (llama_decode(ctx, batch) != 0) {
+        LOGE("Failed to decode prompt");
+        env->ReleaseStringUTFChars(prompt, prompt_chars);
+        return env->NewStringUTF("Error: failed to decode prompt");
+    }
+
+    // Set up sampler chain
+    auto sparams = llama_sampler_chain_default_params();
+    struct llama_sampler * smpl = llama_sampler_chain_init(sparams);
+    llama_sampler_chain_add(smpl, llama_sampler_init_top_k(40));
+    llama_sampler_chain_add(smpl, llama_sampler_init_top_p(0.9f, 1));
+    llama_sampler_chain_add(smpl, llama_sampler_init_temp(0.8f));
+    llama_sampler_chain_add(smpl, llama_sampler_init_dist(42));
+
+    llama_token eos = llama_token_eos(vocab);
+    std::string result;
+    const int max_tokens = 256;
+
+    // Generation loop
+    for (int i = 0; i < max_tokens; i++) {
+        llama_token new_token = llama_sampler_sample(smpl, ctx, -1);
+
+        // Check for end of generation
+        if (llama_token_is_eog(vocab, new_token)) {
+            LOGI("EOS reached after %d tokens", i);
+            break;
+        }
+
+        // Convert token to text
+        char piece[256];
+        int len = llama_token_to_piece(
+                vocab,
+                new_token,
+                piece,
+                sizeof(piece),
+                0,
+                true);
+
+        if (len > 0) {
+            result.append(piece, len);
+        }
+
+        // Prepare next batch with the sampled token
+        llama_batch next_batch = llama_batch_get_one(&new_token, 1);
+        if (llama_decode(ctx, next_batch) != 0) {
+            LOGE("Failed to decode at token %d", i);
+            break;
+        }
+    }
+
+    llama_sampler_free(smpl);
+    env->ReleaseStringUTFChars(prompt, prompt_chars);
+
+    LOGI("Generated %zu chars", result.size());
+    return env->NewStringUTF(result.c_str());
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_example_onenm_1local_1llm_OneNmNative_releaseModel(
-    JNIEnv* env,
-    jobject thiz
-) {
+        JNIEnv * env,
+        jobject thiz) {
+
+    if (ctx) {
+        llama_free(ctx);
+        ctx = nullptr;
+    }
+
+    if (model) {
+        llama_model_free(model);
+        model = nullptr;
+    }
+
+    llama_backend_free();
 }
