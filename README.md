@@ -3,7 +3,10 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Android-green.svg)]()
 
-A Flutter plugin for **on-device LLM inference** on Android, powered by [llama.cpp](https://github.com/ggml-org/llama.cpp). Run large language models locally — no cloud, no API keys, fully offline.
+**Run local LLMs in Flutter apps with just a few lines of code.**
+
+**onenm_local_llm** is a Flutter plugin that simplifies **on-device language model inference on Android using llama.cpp**.  
+It removes the complexity of **setting up native runtimes, model loading, and inference pipelines**, so developers can integrate **local AI into their apps through a simple API**.
 
 ---
 
