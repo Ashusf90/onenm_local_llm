@@ -24,7 +24,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '1nm Chat',
+      title: '1nm Local LLM Chat',
       theme: ThemeData(
         colorSchemeSeed: Colors.deepPurple,
         useMaterial3: true,
@@ -128,7 +128,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('1nm Chat')),
+      appBar: AppBar(title: const Text('1nm Local LLM Chat')),
       body: Column(
         children: [
           // Loading indicator
