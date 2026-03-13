@@ -35,10 +35,14 @@ _Screenshot / GIF coming soon._
 
 ## Supported Models
 
-| Model               | Size    | RAM  | Context | ID                     |
-| ------------------- | ------- | ---- | ------- | ---------------------- |
-| TinyLlama 1.1B Chat | ~638 MB | 2 GB | 2048    | `OneNmModel.tinyllama` |
-| Phi-2 2.7B          | ~1.6 GB | 4 GB | 2048    | `OneNmModel.phi2`      |
+| Model                    | Size    | RAM  | Context | ID                     |
+| ------------------------ | ------- | ---- | ------- | ---------------------- |
+| TinyLlama 1.1B Chat      | ~638 MB | 2 GB | 2048    | `OneNmModel.tinyllama` |
+| Phi-2 2.7B               | ~1.6 GB | 4 GB | 2048    | `OneNmModel.phi2`      |
+| Qwen2.5 1.5B Instruct    | ~1.1 GB | 2 GB | 32768   | `OneNmModel.qwen25`    |
+| Gemma 2B IT              | ~1.5 GB | 3 GB | 8192    | `OneNmModel.gemma2b`   |
+| Llama 3.2 3B Instruct    | ~2.0 GB | 4 GB | 131072  | `OneNmModel.llama32`   |
+| Mistral 7B Instruct v0.2 | ~4.4 GB | 8 GB | 32768   | `OneNmModel.mistral7b` |
 
 > You can also create your own `ModelInfo` for any GGUF model — see [Custom Models](#custom-models).
 
@@ -191,9 +195,13 @@ final ai = OneNm(
 Pre-configured model registry. Access built-in models:
 
 ```dart
-OneNmModel.tinyllama  // TinyLlama 1.1B Chat (Q4_K_M)
-OneNmModel.phi2       // Phi-2 2.7B (Q4_K_M)
-OneNmModel.all        // List of all built-in models
+OneNmModel.tinyllama   // TinyLlama 1.1B Chat (Q4_K_M)
+OneNmModel.phi2        // Phi-2 2.7B (Q4_K_M)
+OneNmModel.qwen25      // Qwen2.5 1.5B Instruct (Q4_K_M)
+OneNmModel.gemma2b     // Gemma 2B IT (Q4_K_M)
+OneNmModel.llama32     // Llama 3.2 3B Instruct (Q4_K_M)
+OneNmModel.mistral7b   // Mistral 7B Instruct v0.2 (Q4_K_M)
+OneNmModel.all         // List of all built-in models
 ```
 
 ### Custom Models

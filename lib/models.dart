@@ -188,6 +188,39 @@ class OneNmModel {
     systemDefault: 'You are a helpful AI assistant.',
   );
 
+  /// Chat template used by Qwen2.5 (ChatML format).
+  static const _chatmlTemplate = ChatTemplate(
+    system: '<|im_start|>system\n{text}<|im_end|>\n',
+    user: '<|im_start|>user\n{text}<|im_end|>\n',
+    assistant: '<|im_start|>assistant\n{text}<|im_end|>\n',
+    systemDefault:
+        'You are Qwen, created by Alibaba Cloud. You are a helpful assistant.',
+  );
+
+  /// Chat template used by Google Gemma instruction‑tuned models.
+  static const _gemmaTemplate = ChatTemplate(
+    system:
+        '<start_of_turn>user\n{text}<end_of_turn>\n<start_of_turn>model\nUnderstood.<end_of_turn>\n',
+    user: '<start_of_turn>user\n{text}<end_of_turn>\n',
+    assistant: '<start_of_turn>model\n{text}<end_of_turn>\n',
+  );
+
+  /// Chat template used by Meta Llama 3 / 3.2 instruction‑tuned models.
+  static const _llama3Template = ChatTemplate(
+    system:
+        '<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{text}<|eot_id|>',
+    user: '<|start_header_id|>user<|end_header_id|>\n\n{text}<|eot_id|>',
+    assistant:
+        '<|start_header_id|>assistant<|end_header_id|>\n\n{text}<|eot_id|>',
+  );
+
+  /// Chat template used by Mistral Instruct models.
+  static const _mistralTemplate = ChatTemplate(
+    system: '<s>[INST] {text}\n\n',
+    user: '{text} [/INST]',
+    assistant: '{text}</s>\n[INST] ',
+  );
+
   /// TinyLlama 1.1B Chat — lightweight model suitable for most phones.
   ///
   /// ~638 MB download, 2 GB RAM recommended, 2048 token context.
@@ -218,8 +251,68 @@ class OneNmModel {
     chatTemplate: _phi2Template,
   );
 
+  /// Qwen2.5 1.5B Instruct — compact multilingual model with strong coding.
+  ///
+  /// ~1.1 GB download, 2 GB RAM recommended, 32768 token context.
+  static const qwen25 = ModelInfo(
+    id: 'qwen25',
+    name: 'Qwen2.5 1.5B Instruct',
+    fileName: 'qwen2.5-1.5b-instruct-q4_k_m.gguf',
+    ggufUrl:
+        'https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf',
+    sizeMB: 1120,
+    minRamGB: 2,
+    context: 32768,
+    chatTemplate: _chatmlTemplate,
+  );
+
+  /// Google Gemma 2B IT — lightweight instruction‑tuned model.
+  ///
+  /// ~1.5 GB download, 3 GB RAM recommended, 8192 token context.
+  static const gemma2b = ModelInfo(
+    id: 'gemma2b',
+    name: 'Gemma 2B IT',
+    fileName: 'gemma-2b-it-q4_k_m.gguf',
+    ggufUrl:
+        'https://huggingface.co/lmstudio-ai/gemma-2b-it-GGUF/resolve/main/gemma-2b-it-q4_k_m.gguf',
+    sizeMB: 1500,
+    minRamGB: 3,
+    context: 8192,
+    chatTemplate: _gemmaTemplate,
+  );
+
+  /// Meta Llama 3.2 3B Instruct — capable multilingual model.
+  ///
+  /// ~2.0 GB download, 4 GB RAM recommended, 131072 token context.
+  static const llama32 = ModelInfo(
+    id: 'llama32',
+    name: 'Llama 3.2 3B Instruct',
+    fileName: 'Llama-3.2-3B-Instruct-Q4_K_M.gguf',
+    ggufUrl:
+        'https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf',
+    sizeMB: 2020,
+    minRamGB: 4,
+    context: 131072,
+    chatTemplate: _llama3Template,
+  );
+
+  /// Mistral 7B Instruct v0.2 — high‑quality 7B instruction model.
+  ///
+  /// ~4.4 GB download, 8 GB RAM recommended, 32768 token context.
+  static const mistral7b = ModelInfo(
+    id: 'mistral7b',
+    name: 'Mistral 7B Instruct v0.2',
+    fileName: 'mistral-7b-instruct-v0.2.Q4_K_M.gguf',
+    ggufUrl:
+        'https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q4_K_M.gguf',
+    sizeMB: 4370,
+    minRamGB: 8,
+    context: 32768,
+    chatTemplate: _mistralTemplate,
+  );
+
   /// List of all built-in models.
-  static const all = [tinyllama, phi2];
+  static const all = [tinyllama, phi2, qwen25, gemma2b, llama32, mistral7b];
 
   OneNmModel._();
 }
