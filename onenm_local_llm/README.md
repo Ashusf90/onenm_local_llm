@@ -96,6 +96,7 @@ OneNm({
   required ModelInfo model,           // Which model to use
   GenerationSettings settings,        // Sampling parameters (optional)
   OneNmProgressCallback? onProgress,  // Status callback (optional)
+  bool debug = false,                 // Enable verbose [1nm] logs
 })
 ```
 
@@ -108,6 +109,37 @@ OneNm({
 | `generate(String prompt)`                      | Raw text completion without chat formatting. For advanced/custom use.                                                              |
 | `clearHistory()`                               | Resets conversation history to start a fresh chat session.                                                                         |
 | `dispose()`                                    | Releases all native resources.                                                                                                     |
+
+### Debug Logging
+
+Enable verbose logs to see what the plugin is doing under the hood:
+
+```dart
+final ai = OneNm(
+  model: OneNmModel.tinyllama,
+  debug: true,
+);
+```
+
+Output in the debug console:
+
+```
+[1nm] Initializing with model: TinyLlama 1.1B Chat
+[1nm] Settings: temp=0.7, topK=40, topP=0.9, maxTokens=128, repeatPenalty=1.1
+[1nm] Model found (637.8 MB)
+[1nm] Loading model...
+[1nm] Model loaded in 4.2s
+[1nm] Ready
+[1nm] Total initialization: 4.3s
+[1nm] Chat message (12 chars, 1 turns)
+[1nm] Formatted prompt: 95 chars
+[1nm] Generating response...
+[1nm] Response generated in 2.1s (142 chars)
+[1nm] History cleared (was 2 messages)
+[1nm] Disposed
+```
+
+When `debug` is `false` (the default), no logs are printed — only `onProgress` callbacks fire.
 
 ### `GenerationSettings`
 

@@ -62,6 +62,12 @@ class OneNm {
   /// Optional callback for download/load progress updates.
   final OneNmProgressCallback? onProgress;
 
+  /// When `true`, detailed `[1nm]` logs are printed to the debug console.
+  ///
+  /// Includes timing information for model loading, generation, etc.
+  /// Defaults to `false`.
+  final bool debug;
+
   bool _ready = false;
 
   final _history = <({String role, String text})>[];
@@ -72,15 +78,23 @@ class OneNm {
   /// * [model] — which LLM to use (see [OneNmModel] for built-in options).
   /// * [settings] — sampling parameters; defaults are suitable for chat.
   /// * [onProgress] — optional callback for download / load status messages.
+  /// * [debug] — enable verbose `[1nm]` logs in the debug console.
   OneNm({
     required this.model,
     this.settings = const GenerationSettings(),
     this.onProgress,
+    this.debug = false,
   });
 
-  /// Log a status message to debug console and notify [onProgress].
+  /// Log a debug message. Only prints when [debug] is `true`.
+  void _log(String msg) {
+    if (debug) debugPrint('[1nm] $msg');
+  }
+
+  /// Report a status message to [onProgress] and, if [debug] is on, the
+  /// debug console.
   void _report(String msg) {
-    debugPrint('[1nm] $msg');
+    _log(msg);
     onProgress?.call(msg);
   }
 
@@ -91,9 +105,16 @@ class OneNm {
   ///
   /// Throws an [Exception] if loading ultimately fails.
   Future<void> initialize() async {
+    final sw = Stopwatch()..start();
+    _log('Initializing with model: ${model.name}');
+    _log('Settings: temp=${settings.temperature}, topK=${settings.topK}, '
+        'topP=${settings.topP}, maxTokens=${settings.maxTokens}, '
+        'repeatPenalty=${settings.repeatPenalty}');
+
     final modelPath = await _ensureModel();
 
     _report('Loading model...');
+    final loadSw = Stopwatch()..start();
     final loaded = await OnenmLocalLlmPlatform.instance.loadModel(modelPath);
     if (loaded != true) {
       // Load failed — likely corrupted download. Delete and retry once.
@@ -103,12 +124,15 @@ class OneNm {
       await _downloadModel(modelPath);
 
       _report('Loading model (retry)...');
+      loadSw.reset();
       final retryLoaded =
           await OnenmLocalLlmPlatform.instance.loadModel(modelPath);
       if (retryLoaded != true) throw Exception('Failed to load model');
     }
+    _log('Model loaded in ${_elapsed(loadSw)}');
     _ready = true;
     _report('Ready');
+    _log('Total initialization: ${_elapsed(sw)}');
   }
 
   /// Sends a chat message and returns the model's reply.
@@ -127,14 +151,20 @@ class OneNm {
     _systemPrompt = systemPrompt ?? _systemPrompt;
 
     _history.add((role: 'user', text: message));
+    _log('Chat message (${message.length} chars, ${_history.length} turns)');
+
     final prompt = model.chatTemplate.format(
       systemPrompt: _systemPrompt,
       messages: _history,
     );
+    _log('Formatted prompt: ${prompt.length} chars');
 
+    final sw = Stopwatch()..start();
+    _log('Generating response...');
     final result =
         await OnenmLocalLlmPlatform.instance.generate(prompt, settings.toMap());
     final reply = (result ?? '').trim();
+    _log('Response generated in ${_elapsed(sw)} (${reply.length} chars)');
 
     _history.add((role: 'assistant', text: reply));
     return reply;
@@ -148,13 +178,18 @@ class OneNm {
   /// Throws a [StateError] if [initialize] has not been called.
   Future<String> generate(String prompt) async {
     if (!_ready) throw StateError('Call initialize() first');
+    _log('Generate called (${prompt.length} chars)');
+    final sw = Stopwatch()..start();
     final result =
         await OnenmLocalLlmPlatform.instance.generate(prompt, settings.toMap());
-    return result ?? '';
+    final output = result ?? '';
+    _log('Generated in ${_elapsed(sw)} (${output.length} chars)');
+    return output;
   }
 
   /// Clears the conversation history to start a fresh chat session.
   void clearHistory() {
+    _log('History cleared (was ${_history.length} messages)');
     _history.clear();
   }
 
@@ -163,11 +198,20 @@ class OneNm {
   /// After calling this, the instance cannot be used again unless
   /// [initialize] is called once more.
   Future<void> dispose() async {
+    _log('Disposing...');
     await OnenmLocalLlmPlatform.instance.releaseModel();
     _ready = false;
+    _log('Disposed');
   }
 
   // ── Internal helpers ──────────────────────────────────────────
+
+  /// Format a [Stopwatch] elapsed time as a human-readable string.
+  static String _elapsed(Stopwatch sw) {
+    final ms = sw.elapsedMilliseconds;
+    if (ms < 1000) return '${ms}ms';
+    return '${(ms / 1000).toStringAsFixed(1)}s';
+  }
 
   /// Returns the local path to the GGUF file, downloading it if needed.
   Future<String> _ensureModel() async {
