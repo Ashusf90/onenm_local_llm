@@ -16,8 +16,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  path_provider: ^2.1.2
-  permission_handler: ^11.3.0
 
   onenm_local_llm:
     # When depending on this package from a real application you should use:

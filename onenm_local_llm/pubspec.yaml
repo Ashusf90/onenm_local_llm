@@ -1,5 +1,5 @@
 name: onenm_local_llm
-description: "A new Flutter plugin project."
+description: 'A new Flutter plugin project.'
 version: 0.0.1
 homepage:
 
@@ -11,6 +11,8 @@ dependencies:
   flutter:
     sdk: flutter
   plugin_platform_interface: ^2.0.2
+  path_provider: ^2.1.2
+  http: ^1.2.0
 
 dev_dependencies:
   flutter_test:
