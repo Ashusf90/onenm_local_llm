@@ -142,10 +142,10 @@ Java_com_example_onenm_1local_1llm_OneNmNative_generate(
 
     const llama_vocab * vocab = llama_model_get_vocab(model);
 
-    // Clear KV cache so the full conversation prompt is decoded fresh.
+    // Clear model memory so the full conversation prompt is decoded fresh.
     // This is essential for multi-turn chat: each call sends the entire
-    // conversation history, so stale cache entries would corrupt output.
-    llama_kv_cache_clear(ctx);
+    // conversation history, so stale state would corrupt output.
+    llama_memory_clear(llama_get_memory(ctx), true);
 
     // Tokenize the prompt
     int n = prompt_str.size() + 128;
@@ -189,7 +189,7 @@ Java_com_example_onenm_1local_1llm_OneNmNative_generate(
         llama_token new_token = llama_sampler_sample(smpl, ctx, -1);
 
         // Check for end of generation
-        if (llama_token_is_eog(vocab, new_token)) {
+        if (llama_vocab_is_eog(vocab, new_token)) {
             LOGI("EOS reached after %d tokens", i);
             break;
         }
