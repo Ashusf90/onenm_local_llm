@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/banner.png" alt="OneNm Local LLM banner" />
+</p>
+
 # onenm_local_llm
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -5,8 +9,18 @@
 
 **Run local LLMs in Flutter apps with just a few lines of code.**
 
+> **⚠️ Early MVP** — This plugin is in active early development. The API may change, and only Android arm64 devices are supported for now. Feedback and bug reports are welcome!
+
 **onenm_local_llm** is a Flutter plugin that simplifies **on-device language model inference on Android using llama.cpp**.  
 It removes the complexity of **setting up native runtimes, model loading, and inference pipelines**, so developers can integrate **local AI into their apps through a simple API**.
+
+---
+
+## Demo
+
+<!-- TODO: Add a screenshot or GIF of the example chat app in action -->
+
+_Screenshot / GIF coming soon._
 
 ---
 
@@ -37,6 +51,13 @@ It removes the complexity of **setting up native runtimes, model loading, and in
 
 > **Note:** x86/x86_64 emulators are not supported — the prebuilt native libraries are arm64-v8a only. Use a physical device for testing.
 
+### Tested On
+
+| Device                | SoC            | RAM  | Status |
+| --------------------- | -------------- | ---- | ------ |
+| Samsung Galaxy S21 FE | Snapdragon 888 | 8 GB | ✅     |
+| Samsung Galaxy S9+    | Snapdragon 845 | 8 GB | ✅     |
+
 ## Getting Started
 
 ### 1. Add the dependency
@@ -48,6 +69,8 @@ dependencies:
       url: https://github.com/SxryxnshS5/1nm_LocalAI_Flutter.git
       path: onenm_local_llm
 ```
+
+> **📦 Storage note:** The first call to `initialize()` downloads the model file. TinyLlama is ~638 MB or/and Phi-2 is ~1.6 GB. Models are cached locally after the first download, so subsequent launches are offline.
 
 ### 2. Add internet permission
 
@@ -272,6 +295,15 @@ The plugin ships with prebuilt llama.cpp libraries for `arm64-v8a`. If you need 
    ```
 3. Copy the resulting `.so` files to `android/src/main/jniLibs/arm64-v8a/`
 4. Copy the public headers to `android/src/main/cpp/llama/`
+
+## Roadmap
+
+<!-- Coming soon — this section will be expanded as the project matures. -->
+
+- 🍎 **iOS support**
+- 📡 **Streaming responses** — token-by-token output via streams
+- 🧠 **More models** — Gemma, Mistral, and other popular GGUF models
+- ⚡ **Performance & memory improvements** — reduced footprint, faster cold-start
 
 ## Known Limitations
 
