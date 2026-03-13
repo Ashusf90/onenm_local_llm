@@ -38,7 +38,18 @@ class OneNm {
 
     _report('Loading model...');
     final loaded = await OnenmLocalLlmPlatform.instance.loadModel(modelPath);
-    if (loaded != true) throw Exception('Failed to load model');
+    if (loaded != true) {
+      // Load failed — likely corrupted download. Delete and retry once.
+      _report('Load failed, re-downloading...');
+      final file = File(modelPath);
+      if (await file.exists()) await file.delete();
+      await _downloadModel(modelPath);
+
+      _report('Loading model (retry)...');
+      final retryLoaded =
+          await OnenmLocalLlmPlatform.instance.loadModel(modelPath);
+      if (retryLoaded != true) throw Exception('Failed to load model');
+    }
     _ready = true;
     _report('Ready');
   }
@@ -68,35 +79,67 @@ class OneNm {
 
     if (await file.exists()) {
       final size = await file.length();
-      _report('Model found (${(size / 1024 / 1024).toStringAsFixed(1)} MB)');
-      return modelPath;
+      final expectedMin = model.sizeMB * 0.95 * 1024 * 1024;
+      if (size >= expectedMin) {
+        _report('Model found (${(size / 1024 / 1024).toStringAsFixed(1)} MB)');
+        return modelPath;
+      }
+      // File too small — probably a truncated download
+      _report('Incomplete model file, re-downloading...');
+      await file.delete();
     }
 
-    _report('Downloading ${model.name} (~${model.sizeMB} MB)...');
-
-    final request = http.Request('GET', Uri.parse(model.ggufUrl));
-    final response = await http.Client().send(request);
-
-    if (response.statusCode != 200) {
-      throw Exception('Download failed: HTTP ${response.statusCode}');
-    }
-
-    final totalBytes = response.contentLength ?? model.sizeMB * 1024 * 1024;
-    int receivedBytes = 0;
-
-    final sink = file.openWrite();
-    await for (final chunk in response.stream) {
-      sink.add(chunk);
-      receivedBytes += chunk.length;
-      final pct = (receivedBytes / totalBytes * 100).toStringAsFixed(1);
-      final recvMB = (receivedBytes / 1024 / 1024).toStringAsFixed(1);
-      final totalMB = (totalBytes / 1024 / 1024).toStringAsFixed(1);
-      _report('Downloading ${model.name}...\n'
-          '$recvMB / $totalMB MB ($pct%)');
-    }
-    await sink.close();
-
-    _report('Download complete');
+    await _downloadModel(modelPath);
     return modelPath;
+  }
+
+  Future<void> _downloadModel(String modelPath) async {
+    const maxAttempts = 3;
+    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        _report('Downloading ${model.name} (~${model.sizeMB} MB)...'
+            '${attempt > 1 ? ' (attempt $attempt/$maxAttempts)' : ''}');
+
+        final request = http.Request('GET', Uri.parse(model.ggufUrl));
+        final response = await http.Client().send(request);
+
+        if (response.statusCode != 200) {
+          throw Exception('HTTP ${response.statusCode}');
+        }
+
+        final totalBytes = response.contentLength ?? model.sizeMB * 1024 * 1024;
+        int receivedBytes = 0;
+
+        final file = File(modelPath);
+        final sink = file.openWrite();
+        await for (final chunk in response.stream) {
+          sink.add(chunk);
+          receivedBytes += chunk.length;
+          final pct = (receivedBytes / totalBytes * 100).toStringAsFixed(1);
+          final recvMB = (receivedBytes / 1024 / 1024).toStringAsFixed(1);
+          final totalMB = (totalBytes / 1024 / 1024).toStringAsFixed(1);
+          _report('Downloading ${model.name}...\n'
+              '$recvMB / $totalMB MB ($pct%)');
+        }
+        await sink.close();
+
+        // Verify file size
+        final size = await file.length();
+        final expectedMin = model.sizeMB * 0.95 * 1024 * 1024;
+        if (size < expectedMin) {
+          await file.delete();
+          throw Exception(
+              'Download incomplete: ${(size / 1024 / 1024).toStringAsFixed(1)} MB');
+        }
+
+        _report('Download complete');
+        return;
+      } catch (e) {
+        if (attempt == maxAttempts) rethrow;
+        final delay = Duration(seconds: 2 << (attempt - 1)); // 2s, 4s
+        _report('Download failed: $e\nRetrying in ${delay.inSeconds}s...');
+        await Future.delayed(delay);
+      }
+    }
   }
 }
