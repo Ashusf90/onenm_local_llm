@@ -2,7 +2,7 @@ package com.example.onenm_local_llm
 
 class OneNmNative {
     external fun loadModel(modelPath: String, nativeLibDir: String): Boolean
-    external fun generate(prompt: String): String
+    external fun generate(prompt: String, temperature: Float, topK: Int, topP: Float, maxTokens: Int, repeatPenalty: Float): String
     external fun releaseModel()
 
     companion object {

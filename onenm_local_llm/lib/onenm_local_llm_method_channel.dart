@@ -21,10 +21,10 @@ class MethodChannelOnenmLocalLlm extends OnenmLocalLlmPlatform {
   }
 
   @override
-  Future<String?> generate(String prompt) async {
+  Future<String?> generate(String prompt, Map<String, dynamic> settings) async {
     return await methodChannel.invokeMethod<String>(
       'generate',
-      {'prompt': prompt},
+      {'prompt': prompt, ...settings},
     );
   }
 

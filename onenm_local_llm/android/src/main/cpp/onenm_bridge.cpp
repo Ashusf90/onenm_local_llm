@@ -86,7 +86,12 @@ JNIEXPORT jstring JNICALL
 Java_com_example_onenm_1local_1llm_OneNmNative_generate(
         JNIEnv * env,
         jobject thiz,
-        jstring prompt) {
+        jstring prompt,
+        jfloat temperature,
+        jint topK,
+        jfloat topP,
+        jint maxTokens,
+        jfloat repeatPenalty) {
 
     if (!ctx || !model) {
         return env->NewStringUTF("Model not loaded");
@@ -95,8 +100,13 @@ Java_com_example_onenm_1local_1llm_OneNmNative_generate(
     const char * prompt_chars = env->GetStringUTFChars(prompt, nullptr);
     std::string prompt_str(prompt_chars);
     LOGI("generate called with prompt: %s", prompt_chars);
+    LOGI("settings: temp=%.2f top_k=%d top_p=%.2f max=%d repeat=%.2f",
+         (float)temperature, (int)topK, (float)topP, (int)maxTokens, (float)repeatPenalty);
 
     const llama_vocab * vocab = llama_model_get_vocab(model);
+
+    // Clear KV cache so the full conversation prompt is decoded fresh
+    llama_kv_cache_clear(ctx);
 
     // Tokenize the prompt
     int n = prompt_str.size() + 128;
@@ -122,20 +132,20 @@ Java_com_example_onenm_1local_1llm_OneNmNative_generate(
         return env->NewStringUTF("Error: failed to decode prompt");
     }
 
-    // Set up sampler chain
+    // Set up sampler chain with provided settings
     auto sparams = llama_sampler_chain_default_params();
     struct llama_sampler * smpl = llama_sampler_chain_init(sparams);
-    llama_sampler_chain_add(smpl, llama_sampler_init_top_k(40));
-    llama_sampler_chain_add(smpl, llama_sampler_init_top_p(0.9f, 1));
-    llama_sampler_chain_add(smpl, llama_sampler_init_temp(0.8f));
+    llama_sampler_chain_add(smpl, llama_sampler_init_penalties(
+            64, repeatPenalty, 0.0f, 0.0f));
+    llama_sampler_chain_add(smpl, llama_sampler_init_top_k(topK));
+    llama_sampler_chain_add(smpl, llama_sampler_init_top_p(topP, 1));
+    llama_sampler_chain_add(smpl, llama_sampler_init_temp(temperature));
     llama_sampler_chain_add(smpl, llama_sampler_init_dist(42));
 
-    llama_token eos = llama_token_eos(vocab);
     std::string result;
-    const int max_tokens = 256;
 
     // Generation loop
-    for (int i = 0; i < max_tokens; i++) {
+    for (int i = 0; i < (int)maxTokens; i++) {
         llama_token new_token = llama_sampler_sample(smpl, ctx, -1);
 
         // Check for end of generation

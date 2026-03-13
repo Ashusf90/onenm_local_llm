@@ -24,7 +24,7 @@ abstract class OnenmLocalLlmPlatform extends PlatformInterface {
     throw UnimplementedError('loadModel() has not been implemented.');
   }
 
-  Future<String?> generate(String prompt) {
+  Future<String?> generate(String prompt, Map<String, dynamic> settings) {
     throw UnimplementedError('generate() has not been implemented.');
   }
 

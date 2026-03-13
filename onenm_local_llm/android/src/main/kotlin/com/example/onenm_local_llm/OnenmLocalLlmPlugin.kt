@@ -56,9 +56,14 @@ class OnenmLocalLlmPlugin: FlutterPlugin, MethodCallHandler {
         if (prompt == null) {
           result.error("INVALID_ARGUMENT", "prompt is required", null)
         } else {
+          val temperature = (call.argument<Double>("temperature") ?: 0.7).toFloat()
+          val topK = call.argument<Int>("topK") ?: 40
+          val topP = (call.argument<Double>("topP") ?: 0.9).toFloat()
+          val maxTokens = call.argument<Int>("maxTokens") ?: 128
+          val repeatPenalty = (call.argument<Double>("repeatPenalty") ?: 1.1).toFloat()
           scope.launch {
             try {
-              val output = getNative().generate(prompt)
+              val output = getNative().generate(prompt, temperature, topK, topP, maxTokens, repeatPenalty)
               withContext(Dispatchers.Main) {
                 result.success(output)
               }

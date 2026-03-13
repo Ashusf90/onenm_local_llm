@@ -17,15 +17,23 @@ typedef OneNmProgressCallback = void Function(String status);
 /// ```dart
 /// final ai = OneNm(model: OneNmModel.tinyllama);
 /// await ai.initialize();
-/// final reply = await ai.generate("Hello");
+/// final reply = await ai.chat("Hello");
 /// ai.dispose();
 /// ```
 class OneNm {
   final ModelInfo model;
+  final GenerationSettings settings;
   final OneNmProgressCallback? onProgress;
   bool _ready = false;
 
-  OneNm({required this.model, this.onProgress});
+  final _history = <({String role, String text})>[];
+  String? _systemPrompt;
+
+  OneNm({
+    required this.model,
+    this.settings = const GenerationSettings(),
+    this.onProgress,
+  });
 
   void _report(String msg) {
     debugPrint('[1nm] $msg');
@@ -54,11 +62,38 @@ class OneNm {
     _report('Ready');
   }
 
-  /// Generate a completion for [prompt]. Must call [initialize] first.
+  /// Send a chat message. Maintains conversation history automatically.
+  /// Uses the model's chat template to format the prompt.
+  Future<String> chat(String message, {String? systemPrompt}) async {
+    if (!_ready) throw StateError('Call initialize() first');
+    _systemPrompt = systemPrompt ?? _systemPrompt;
+
+    _history.add((role: 'user', text: message));
+    final prompt = model.chatTemplate.format(
+      systemPrompt: _systemPrompt,
+      messages: _history,
+    );
+
+    final result =
+        await OnenmLocalLlmPlatform.instance.generate(prompt, settings.toMap());
+    final reply = (result ?? '').trim();
+
+    _history.add((role: 'assistant', text: reply));
+    return reply;
+  }
+
+  /// Generate a raw completion for [prompt] without chat formatting.
+  /// For advanced use — prefer [chat] for conversational use.
   Future<String> generate(String prompt) async {
     if (!_ready) throw StateError('Call initialize() first');
-    final result = await OnenmLocalLlmPlatform.instance.generate(prompt);
+    final result =
+        await OnenmLocalLlmPlatform.instance.generate(prompt, settings.toMap());
     return result ?? '';
+  }
+
+  /// Clear conversation history to start a new chat.
+  void clearHistory() {
+    _history.clear();
   }
 
   /// Release native resources.

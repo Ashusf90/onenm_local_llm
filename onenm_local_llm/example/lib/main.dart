@@ -64,23 +64,6 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  String _buildPrompt() {
-    final buf = StringBuffer()
-      ..writeln('<|system|>')
-      ..writeln('You are a helpful assistant.</s>');
-    for (final msg in _messages) {
-      if (msg.isUser) {
-        buf.writeln('<|user|>');
-        buf.writeln('${msg.text}</s>');
-      } else {
-        buf.writeln('<|assistant|>');
-        buf.writeln('${msg.text}</s>');
-      }
-    }
-    buf.writeln('<|assistant|>');
-    return buf.toString();
-  }
-
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -105,8 +88,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollToBottom();
 
     try {
-      final prompt = _buildPrompt();
-      final reply = await ai.generate(prompt);
+      final reply = await ai.chat(text);
       setState(() {
         _messages.add(_ChatMessage(reply.trim(), isUser: false));
         _generating = false;
