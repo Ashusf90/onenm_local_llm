@@ -1,3 +1,7 @@
+// Copyright 2024 1nm. All rights reserved.
+// Use of this source code is governed by a MIT license that can be
+// found in the LICENSE file.
+
 package com.example.onenm_local_llm
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin
@@ -7,12 +11,34 @@ import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import kotlinx.coroutines.*
 
+/**
+ * Flutter plugin for on-device LLM inference using llama.cpp.
+ *
+ * This plugin acts as the bridge between the Dart layer and [OneNmNative],
+ * routing method-channel calls to the C++ backend via JNI.
+ *
+ * ## Supported methods
+ *
+ * | Method         | Arguments                               | Returns   |
+ * |----------------|----------------------------------------|-----------|
+ * | `pingNative`   | —                                      | `"pong"` |
+ * | `loadModel`    | `modelPath: String`                    | `Boolean` |
+ * | `generate`     | `prompt, temperature, topK, topP, ...` | `String`  |
+ * | `releaseModel` | —                                      | `null`    |
+ */
 class OnenmLocalLlmPlugin: FlutterPlugin, MethodCallHandler {
   private lateinit var channel: MethodChannel
+
+  /** Lazily initialised JNI bridge — deferred to avoid UnsatisfiedLinkError on registration. */
   private var native: OneNmNative? = null
+
+  /** Coroutine scope for running model operations off the main thread. */
   private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+  /** Absolute path to the app's native library directory (contains .so files). */
   private var nativeLibDir: String? = null
 
+  /** Returns the shared [OneNmNative] instance, creating it on first access. */
   private fun getNative(): OneNmNative {
     if (native == null) {
       native = OneNmNative()

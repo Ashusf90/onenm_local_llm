@@ -1,15 +1,258 @@
 # onenm_local_llm
 
-A new Flutter plugin project.
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Android-green.svg)]()
+
+A Flutter plugin for **on-device LLM inference** on Android, powered by [llama.cpp](https://github.com/ggml-org/llama.cpp). Run large language models locally — no cloud, no API keys, fully offline.
+
+---
+
+## Features
+
+- **100% on-device** — all inference runs locally using llama.cpp. No data leaves the phone.
+- **Automatic model management** — downloads GGUF models from HuggingFace on first launch, caches them locally.
+- **Multi-turn chat** — built-in conversation history and per-model chat templates (Zephyr, Phi-2, etc.).
+- **Configurable sampling** — temperature, top-k, top-p, repeat penalty, max tokens.
+- **Simple API** — three methods: `initialize()`, `chat()`, `dispose()`.
+- **Retry logic** — automatic retries with exponential backoff for downloads and model loading.
+
+## Supported Models
+
+| Model               | Size    | RAM  | Context | ID                     |
+| ------------------- | ------- | ---- | ------- | ---------------------- |
+| TinyLlama 1.1B Chat | ~638 MB | 2 GB | 2048    | `OneNmModel.tinyllama` |
+| Phi-2 2.7B          | ~1.6 GB | 4 GB | 2048    | `OneNmModel.phi2`      |
+
+> You can also create your own `ModelInfo` for any GGUF model — see [Custom Models](#custom-models).
+
+## Requirements
+
+- **Android** arm64-v8a device (most modern phones)
+- **Min SDK** 21 (Android 5.0)
+- **Flutter** ≥ 3.3.0
+- **Internet** for first-time model download only
+
+> **Note:** x86/x86_64 emulators are not supported — the prebuilt native libraries are arm64-v8a only. Use a physical device for testing.
 
 ## Getting Started
 
-This project is a starting point for a Flutter
-[plug-in package](https://flutter.dev/to/develop-plugins),
-a specialized package that includes platform-specific implementation code for
-Android and/or iOS.
+### 1. Add the dependency
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```yaml
+dependencies:
+  onenm_local_llm:
+    git:
+      url: https://github.com/SxryxnshS5/1nm_LocalAI_Flutter.git
+      path: onenm_local_llm
+```
 
+### 2. Add internet permission
+
+In your app's `android/app/src/main/AndroidManifest.xml`:
+
+```xml
+<uses-permission android:name="android.permission.INTERNET"/>
+```
+
+### 3. Use it
+
+```dart
+import 'package:onenm_local_llm/onenm_local_llm.dart';
+
+// Create an instance with a model
+final ai = OneNm(
+  model: OneNmModel.tinyllama,
+  onProgress: (status) => print(status),
+);
+
+// Download (if needed) and load the model
+await ai.initialize();
+
+// Chat — history is maintained automatically
+final reply = await ai.chat('What is Flutter?');
+print(reply);
+
+// Continue the conversation
+final followUp = await ai.chat('Tell me more about its architecture.');
+print(followUp);
+
+// Start a new conversation
+ai.clearHistory();
+
+// Clean up when done
+await ai.dispose();
+```
+
+## API Reference
+
+### `OneNm`
+
+The main entry point for the plugin.
+
+#### Constructor
+
+```dart
+OneNm({
+  required ModelInfo model,           // Which model to use
+  GenerationSettings settings,        // Sampling parameters (optional)
+  OneNmProgressCallback? onProgress,  // Status callback (optional)
+})
+```
+
+#### Methods
+
+| Method                                         | Description                                                                                                                        |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `initialize()`                                 | Downloads the model (if not cached) and loads it. Must be called first.                                                            |
+| `chat(String message, {String? systemPrompt})` | Sends a message and returns the model's reply. Maintains conversation history and applies the model's chat template automatically. |
+| `generate(String prompt)`                      | Raw text completion without chat formatting. For advanced/custom use.                                                              |
+| `clearHistory()`                               | Resets conversation history to start a fresh chat session.                                                                         |
+| `dispose()`                                    | Releases all native resources.                                                                                                     |
+
+### `GenerationSettings`
+
+Controls sampling behavior during text generation.
+
+```dart
+const settings = GenerationSettings(
+  temperature: 0.7,     // Randomness (0 = deterministic, >1 = creative)
+  topK: 40,             // Keep only top-K most probable tokens
+  topP: 0.9,            // Nucleus sampling threshold
+  maxTokens: 128,       // Max tokens to generate per call
+  repeatPenalty: 1.1,   // Penalise repeated tokens (1.0 = off)
+);
+
+final ai = OneNm(
+  model: OneNmModel.tinyllama,
+  settings: settings,
+);
+```
+
+### `OneNmModel`
+
+Pre-configured model registry. Access built-in models:
+
+```dart
+OneNmModel.tinyllama  // TinyLlama 1.1B Chat (Q4_K_M)
+OneNmModel.phi2       // Phi-2 2.7B (Q4_K_M)
+OneNmModel.all        // List of all built-in models
+```
+
+### Custom Models
+
+Create your own `ModelInfo` to use any GGUF model:
+
+```dart
+const myModel = ModelInfo(
+  id: 'my-model',
+  name: 'My Custom Model',
+  fileName: 'my-model.Q4_K_M.gguf',
+  ggufUrl: 'https://huggingface.co/.../resolve/main/my-model.Q4_K_M.gguf',
+  sizeMB: 1000,
+  minRamGB: 3,
+  context: 4096,
+  chatTemplate: ChatTemplate(
+    system: '<|system|>\n{text}</s>\n',
+    user: '<|user|>\n{text}</s>\n',
+    assistant: '<|assistant|>\n{text}</s>\n',
+  ),
+);
+
+final ai = OneNm(model: myModel);
+```
+
+## Architecture
+
+```
+┌─────────────┐     MethodChannel     ┌──────────────────┐
+│  Dart API    │ ◄──────────────────► │  Kotlin Plugin    │
+│  (OneNm)     │   "onenm_local_llm"  │  (OnenmLocalLlm)  │
+└─────────────┘                       └────────┬─────────┘
+                                               │ JNI
+                                      ┌────────▼─────────┐
+                                      │  C++ Bridge       │
+                                      │  (onenm_bridge)   │
+                                      └────────┬─────────┘
+                                               │
+                                      ┌────────▼─────────┐
+                                      │  llama.cpp        │
+                                      │  (prebuilt .so)   │
+                                      └──────────────────┘
+```
+
+**Layer breakdown:**
+
+| Layer              | Language | File(s)                                       | Role                                                |
+| ------------------ | -------- | --------------------------------------------- | --------------------------------------------------- |
+| Public API         | Dart     | `lib/onenm_local_llm.dart`, `lib/models.dart` | User-facing `OneNm` class, model registry, settings |
+| Platform interface | Dart     | `lib/onenm_local_llm_platform_interface.dart` | Federated plugin contract                           |
+| Method channel     | Dart     | `lib/onenm_local_llm_method_channel.dart`     | Dart ↔ native serialisation                         |
+| Plugin host        | Kotlin   | `OnenmLocalLlmPlugin.kt`                      | Routes method calls, coroutine dispatch             |
+| JNI bridge         | Kotlin   | `OneNmNative.kt`                              | `external fun` declarations, library loading        |
+| Native bridge      | C++      | `onenm_bridge.cpp`                            | llama.cpp integration, sampling loop                |
+| Inference engine   | C        | Prebuilt `.so` files                          | llama.cpp, ggml backends                            |
+
+## Project Structure
+
+```
+onenm_local_llm/
+├── lib/                              # Dart public API
+│   ├── onenm_local_llm.dart          #   OneNm class
+│   ├── models.dart                   #   ModelInfo, ChatTemplate, GenerationSettings
+│   ├── onenm_local_llm_platform_interface.dart
+│   └── onenm_local_llm_method_channel.dart
+├── android/
+│   ├── build.gradle
+│   └── src/main/
+│       ├── kotlin/.../
+│       │   ├── OnenmLocalLlmPlugin.kt  # Flutter plugin
+│       │   └── OneNmNative.kt          # JNI declarations
+│       ├── cpp/
+│       │   ├── onenm_bridge.cpp        # C++ ↔ llama.cpp
+│       │   ├── CMakeLists.txt
+│       │   └── llama/                  # llama.cpp headers
+│       └── jniLibs/arm64-v8a/          # Prebuilt .so files
+├── example/                           # Demo chat app
+│   └── lib/main.dart
+├── test/                              # Unit tests
+├── LICENSE
+├── README.md
+├── CHANGELOG.md
+└── CONTRIBUTING.md
+```
+
+## Building from Source
+
+The plugin ships with prebuilt llama.cpp libraries for `arm64-v8a`. If you need to rebuild them (e.g. for a newer llama.cpp version or different ABI):
+
+1. Clone [llama.cpp](https://github.com/ggml-org/llama.cpp)
+2. Build for Android arm64-v8a using the NDK:
+   ```bash
+   mkdir build-android && cd build-android
+   cmake .. \
+     -DCMAKE_TOOLCHAIN_FILE=$NDK/build/cmake/android.toolchain.cmake \
+     -DANDROID_ABI=arm64-v8a \
+     -DANDROID_PLATFORM=android-21
+   make -j$(nproc)
+   ```
+3. Copy the resulting `.so` files to `android/src/main/jniLibs/arm64-v8a/`
+4. Copy the public headers to `android/src/main/cpp/llama/`
+
+## Known Limitations
+
+- **Android only** — iOS support is not yet implemented.
+- **arm64-v8a only** — x86/x86_64 emulators cannot load the prebuilt libraries.
+- **Single model** — only one model can be loaded at a time.
+- **No streaming** — `chat()` and `generate()` return the full response; token-by-token streaming is not yet supported.
+
+## License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+
+llama.cpp is licensed under the MIT License. See [llama.cpp LICENSE](https://github.com/ggml-org/llama.cpp/blob/master/LICENSE).
+
+## Contributing
+
+This project is in early development and **not accepting code contributions** at this time. However, you're welcome to [open an issue](https://github.com/SxryxnshS5/1nm_LocalAI_Flutter/issues) to report bugs, request features, or ask questions.
+
+Once the project reaches a stable, well-structured phase, we plan to open up contributions with clear guidelines. Stay tuned!

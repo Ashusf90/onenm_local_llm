@@ -1,9 +1,17 @@
+// Copyright 2024 1nm. All rights reserved.
+// Use of this source code is governed by a MIT license that can be
+// found in the LICENSE file.
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import 'onenm_local_llm_platform_interface.dart';
 
+/// Android implementation of [OnenmLocalLlmPlatform] using a [MethodChannel].
+///
+/// Communicates with the Kotlin plugin host via the `onenm_local_llm` channel.
 class MethodChannelOnenmLocalLlm extends OnenmLocalLlmPlatform {
+  /// The method channel used to interact with the native platform.
   @visibleForTesting
   final methodChannel = const MethodChannel('onenm_local_llm');
 

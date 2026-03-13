@@ -1,3 +1,23 @@
+// Copyright 2024 1nm. All rights reserved.
+// Use of this source code is governed by a MIT license that can be
+// found in the LICENSE file.
+
+// =============================================================================
+// onenm_bridge.cpp — JNI bridge between Android/Kotlin and llama.cpp
+//
+// This file implements three JNI functions consumed by OneNmNative.kt:
+//
+//   loadModel()    – Initialises the llama.cpp backend, loads a GGUF model,
+//                    and creates an inference context.
+//   generate()     – Tokenises a prompt, feeds it through the model, then
+//                    samples new tokens using a configurable sampler chain
+//                    (repeat-penalty → top-k → top-p → temperature → dist).
+//   releaseModel() – Frees the context, model, and backend.
+//
+// Logging goes to Android logcat under the tags "1nm_bridge" (this file)
+// and "llama.cpp" (upstream library).
+// =============================================================================
+
 #include <jni.h>
 #include <string>
 #include <vector>
@@ -11,6 +31,7 @@
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
 
+// Redirect llama.cpp internal logs to Android logcat.
 static void llama_log_callback(enum ggml_log_level level, const char * text, void * user_data) {
     int prio = ANDROID_LOG_INFO;
     if (level == GGML_LOG_LEVEL_ERROR) prio = ANDROID_LOG_ERROR;
@@ -19,9 +40,13 @@ static void llama_log_callback(enum ggml_log_level level, const char * text, voi
     __android_log_print(prio, "llama.cpp", "%s", text);
 }
 
+// Global model and context — only one model loaded at a time.
 static llama_model * model = nullptr;
 static llama_context * ctx = nullptr;
 
+// ---------------------------------------------------------------------------
+// loadModel  — Load a GGUF model from disk and create an inference context.
+// ---------------------------------------------------------------------------
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_com_example_onenm_1local_1llm_OneNmNative_loadModel(
@@ -35,7 +60,7 @@ Java_com_example_onenm_1local_1llm_OneNmNative_loadModel(
     LOGI("loadModel called with path: %s", path);
     LOGI("Native lib dir: %s", lib_dir);
 
-    // Check if file is accessible
+    // Verify file exists and is readable before handing to llama.cpp.
     FILE * f = fopen(path, "rb");
     if (!f) {
         LOGE("Cannot open file: %s", path);
@@ -48,6 +73,8 @@ Java_com_example_onenm_1local_1llm_OneNmNative_loadModel(
     fclose(f);
     LOGI("File size: %ld bytes", size);
 
+    // Load ggml backends from the app's native library directory so that
+    // platform-specific backends (CPU, GPU, etc.) are discovered at runtime.
     LOGI("Initializing llama backend...");
     llama_log_set(llama_log_callback, nullptr);
     ggml_backend_load_all_from_path(lib_dir);
@@ -81,6 +108,16 @@ Java_com_example_onenm_1local_1llm_OneNmNative_loadModel(
     return ctx != nullptr ? JNI_TRUE : JNI_FALSE;
 }
 
+// ---------------------------------------------------------------------------
+// generate  — Run inference on a prompt and return generated text.
+//
+// Steps:
+//  1. Clear the KV cache so the full prompt is decoded fresh each call.
+//  2. Tokenise the prompt.
+//  3. Feed tokens through the model (prefill / decode).
+//  4. Build a sampler chain: repeat_penalty → top_k → top_p → temp → dist.
+//  5. Sample tokens in a loop until EOS or maxTokens is reached.
+// ---------------------------------------------------------------------------
 extern "C"
 JNIEXPORT jstring JNICALL
 Java_com_example_onenm_1local_1llm_OneNmNative_generate(
@@ -105,7 +142,9 @@ Java_com_example_onenm_1local_1llm_OneNmNative_generate(
 
     const llama_vocab * vocab = llama_model_get_vocab(model);
 
-    // Clear KV cache so the full conversation prompt is decoded fresh
+    // Clear KV cache so the full conversation prompt is decoded fresh.
+    // This is essential for multi-turn chat: each call sends the entire
+    // conversation history, so stale cache entries would corrupt output.
     llama_kv_cache_clear(ctx);
 
     // Tokenize the prompt
@@ -132,7 +171,8 @@ Java_com_example_onenm_1local_1llm_OneNmNative_generate(
         return env->NewStringUTF("Error: failed to decode prompt");
     }
 
-    // Set up sampler chain with provided settings
+    // Set up sampler chain.  Order matters:
+    // penalties → top-k → top-p → temperature → distribution sampling.
     auto sparams = llama_sampler_chain_default_params();
     struct llama_sampler * smpl = llama_sampler_chain_init(sparams);
     llama_sampler_chain_add(smpl, llama_sampler_init_penalties(
@@ -144,7 +184,7 @@ Java_com_example_onenm_1local_1llm_OneNmNative_generate(
 
     std::string result;
 
-    // Generation loop
+    // Auto-regressive generation loop.
     for (int i = 0; i < (int)maxTokens; i++) {
         llama_token new_token = llama_sampler_sample(smpl, ctx, -1);
 
@@ -183,6 +223,9 @@ Java_com_example_onenm_1local_1llm_OneNmNative_generate(
     return env->NewStringUTF(result.c_str());
 }
 
+// ---------------------------------------------------------------------------
+// releaseModel  — Free all native resources.
+// ---------------------------------------------------------------------------
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_example_onenm_1local_1llm_OneNmNative_releaseModel(

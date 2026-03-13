@@ -1,13 +1,25 @@
+# ===========================================================================
+# CMakeLists.txt — Build configuration for the onenm_bridge JNI library.
+#
+# Links onenm_bridge.cpp against prebuilt llama.cpp shared libraries
+# located in jniLibs/<ABI>/. Currently only arm64-v8a is shipped.
+#
+# IMPORTED_NO_SONAME TRUE is set on all imported targets to prevent CMake
+# from embedding the host build-machine's absolute paths into the .so.
+# ===========================================================================
+
 cmake_minimum_required(VERSION 3.22.1)
 project(onenm)
 
+# The JNI shared library that Kotlin loads via System.loadLibrary().
 add_library(onenm_bridge SHARED onenm_bridge.cpp)
 
+# llama.cpp public headers (llama.h, ggml.h, etc.)
 include_directories(
         ${CMAKE_CURRENT_SOURCE_DIR}/llama
 )
 
-# Path to your prebuilt libraries
+# ---------- Prebuilt llama.cpp libraries ----------
 set(LIB_PATH ${CMAKE_SOURCE_DIR}/../jniLibs/${ANDROID_ABI})
 
 add_library(llama SHARED IMPORTED)

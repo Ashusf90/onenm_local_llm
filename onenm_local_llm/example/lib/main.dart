@@ -1,3 +1,15 @@
+// Copyright 2024 1nm. All rights reserved.
+// Use of this source code is governed by a MIT license that can be
+// found in the LICENSE file.
+
+/// Example chat app demonstrating the onenm_local_llm plugin.
+///
+/// Shows how to:
+/// - Initialise the plugin with a model and progress callback.
+/// - Use `ai.chat()` for multi-turn conversation.
+/// - Display messages in a Material 3 chat UI with typing indicators.
+library;
+
 import 'package:flutter/material.dart';
 import 'package:onenm_local_llm/onenm_local_llm.dart';
 
@@ -22,12 +34,15 @@ class MyApp extends StatelessWidget {
   }
 }
 
+/// A single message in the chat UI.
 class _ChatMessage {
   final String text;
   final bool isUser;
   _ChatMessage(this.text, {required this.isUser});
 }
 
+/// Full-screen chat interface that downloads a model on first launch,
+/// then provides an interactive conversation with the on-device LLM.
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
 
@@ -203,6 +218,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 }
 
+/// Rounded message bubble aligned left (assistant) or right (user).
 class _MessageBubble extends StatelessWidget {
   final _ChatMessage msg;
   const _MessageBubble({required this.msg});
