@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - On-device LLM inference via llama.cpp (arm64-v8a).
 - `OneNm` class with `initialize()`, `chat()`, `generate()`, `clearHistory()`,
   and `dispose()` methods.
+- Optional `debug` flag for verbose `[1nm]` console logging with timing.
 - Automatic GGUF model download from HuggingFace with progress reporting
   and retry logic (3 attempts, exponential backoff).
 - Model registry (`OneNmModel`) with TinyLlama 1.1B Chat and Phi-2 2.7B.

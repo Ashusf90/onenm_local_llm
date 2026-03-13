@@ -13,7 +13,7 @@ A Flutter plugin for **on-device LLM inference** on Android, powered by [llama.c
 - **Automatic model management** — downloads GGUF models from HuggingFace on first launch, caches them locally.
 - **Multi-turn chat** — built-in conversation history and per-model chat templates (Zephyr, Phi-2, etc.).
 - **Configurable sampling** — temperature, top-k, top-p, repeat penalty, max tokens.
-- **Simple API** — three methods: `initialize()`, `chat()`, `dispose()`.
+- **Simple API** — `initialize()`, `chat()`, `dispose()` — that's all you need.
 - **Retry logic** — automatic retries with exponential backoff for downloads and model loading.
 
 ## Supported Models
