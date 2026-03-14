@@ -57,10 +57,12 @@ _Screenshot / GIF coming soon._
 
 ### Tested On
 
-| Device                | SoC            | RAM  | Status |
-| --------------------- | -------------- | ---- | ------ |
-| Samsung Galaxy S21 FE | Snapdragon 888 | 8 GB | ✅     |
-| Samsung Galaxy S9+    | Snapdragon 845 | 8 GB | ✅     |
+| Device                | SoC            | RAM  | Models Tested                            | Status |
+| --------------------- | -------------- | ---- | ---------------------------------------- | ------ |
+| Samsung Galaxy S21 FE | Snapdragon 888 | 8 GB | TinyLlama 1.1B, Phi-2 2.7B, Qwen2.5 1.5B | ✅     |
+| Samsung Galaxy S9+    | Snapdragon 845 | 8 GB | TinyLlama 1.1B, Phi-2 2.7B               | ✅     |
+
+> **🧪 Testing in progress** — We're working on testing all supported models across more devices. This table will be updated as results come in.
 
 ## Getting Started
 
