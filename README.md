@@ -4,6 +4,7 @@
 
 # onenm_local_llm
 
+[![pub package](https://img.shields.io/pub/v/onenm_local_llm.svg)](https://pub.dev/packages/onenm_local_llm)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Android-green.svg)]()
 
@@ -68,15 +69,20 @@ _Screenshot / GIF coming soon._
 
 ### 1. Add the dependency
 
-```yaml
-dependencies:
-  onenm_local_llm:
-    git:
-      url: https://github.com/SxryxnshS5/1nm_LocalAI_Flutter.git
-      path: onenm_local_llm
+```bash
+flutter pub add onenm_local_llm
 ```
 
-> **📦 Storage note:** The first call to `initialize()` downloads the model file. TinyLlama is ~638 MB or/and Phi-2 is ~1.6 GB. Models are cached locally after the first download, so subsequent launches are offline.
+Or add it manually to your `pubspec.yaml`:
+
+```yaml
+dependencies:
+  onenm_local_llm: ^0.1.0
+```
+
+Then run `flutter pub get`.
+
+> **📦 Storage note:** The first call to `initialize()` downloads the model file (e.g. TinyLlama ~638 MB, Phi-2 ~1.6 GB). Models are cached locally after the first download, so subsequent launches are fully offline.
 
 ### 2. Add internet permission
 
