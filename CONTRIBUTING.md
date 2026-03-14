@@ -1,31 +1,55 @@
-# Contributing to onenm_local_llm
+# Contributing to 1nm
 
-Thanks for your interest in the project!
+Thanks for your interest in contributing!
 
-## Current Status
+At this stage of the project, we are only accepting contributions related to model support.
 
-This project is in **early development** and we are **not accepting code contributions** at this time. We want to reach a stable, well-structured codebase first.
+## What you can contribute
 
-## How You Can Help Right Now
+- Add new supported models to the model registry
+- Test models on real Android devices
+- Report issues with specific models
+- Improve model documentation
 
-- **Report bugs** — [open an issue](https://github.com/SxryxnshS5/1nm_LocalAI_Flutter/issues) with your device model, Android version, Flutter version, and a full stack trace.
-- **Request features** — describe your use case and what you'd like to see.
-- **Ask questions** — if something is unclear, an issue helps us improve the docs.
+## What we are NOT accepting right now
 
-## In the Future
+- Runtime changes (llama.cpp integration)
+- Plugin architecture changes
+- Large refactors
+- Feature additions
 
-Once the project reaches a stable phase, we plan to open contributions with clear guidelines covering:
+These areas are maintained by the core maintainers.
 
-- Code style (Dart, Kotlin, C++)
-- PR workflow and review process
-- Testing requirements
-- Native build instructions
+## Adding a new model
 
-Stay tuned — star/watch the repo to be notified when we open up!
+When adding a model, please include:
 
-## License
+- Model name
+- Exact GGUF version
+- Quantization level
+- Model size
+- RAM usage
+- Test device used
+- Whether it works with the plugin
 
-By contributing, you agree that your contributions will be licensed under the [MIT License](LICENSE).
+### Example:
+
+```
+Model: TinyLlama 1.1B Chat
+Format: GGUF Q4_K_M
+RAM usage: ~1.3GB
+Tested on: Pixel 7
+Status: Works
+```
+
+Then add the model to the registry.
+
+## Before opening a PR
+
+- Make sure the model runs with llama.cpp
+- Confirm it works with the plugin
+- Add it to the registry
+- Update the supported models list
 
 ## Reporting Issues
 

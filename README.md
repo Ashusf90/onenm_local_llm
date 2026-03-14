@@ -336,6 +336,4 @@ llama.cpp is licensed under the MIT License. See [llama.cpp LICENSE](https://git
 
 ## Contributing
 
-This project is in early development and **not accepting code contributions** at this time. However, you're welcome to [open an issue](https://github.com/SxryxnshS5/1nm_LocalAI_Flutter/issues) to report bugs, request features, or ask questions.
-
-Once the project reaches a stable, well-structured phase, we plan to open up contributions with clear guidelines. Stay tuned!
+We welcome contributions to improve **onenm_local_llm**! At this stage, contributions are limited to adding new models to the model registry and testing them. Please see [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
