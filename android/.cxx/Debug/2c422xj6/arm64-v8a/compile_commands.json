@@ -1,0 +1,7 @@
+[
+{
+  "directory": "D:/Projects/1nm_LocalAI_Flutter/onenm_local_llm/android/.cxx/Debug/2c422xj6/arm64-v8a",
+  "command": "X:\\AndroidSDK\\ndk\\25.1.8937393\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang++.exe --target=aarch64-none-linux-android21 --sysroot=X:/AndroidSDK/ndk/25.1.8937393/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Donenm_bridge_EXPORTS -ID:/Projects/1nm_LocalAI_Flutter/onenm_local_llm/android/src/main/cpp/llama -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -o CMakeFiles\\onenm_bridge.dir\\onenm_bridge.cpp.o -c D:\\Projects\\1nm_LocalAI_Flutter\\onenm_local_llm\\android\\src\\main\\cpp\\onenm_bridge.cpp",
+  "file": "D:\\Projects\\1nm_LocalAI_Flutter\\onenm_local_llm\\android\\src\\main\\cpp\\onenm_bridge.cpp"
+}
+]

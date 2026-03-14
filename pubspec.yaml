@@ -1,11 +1,17 @@
 name: onenm_local_llm
 description: >-
-  On-device LLM inference for Flutter (Android). Run large language models
-  locally using llama.cpp — no cloud, no API keys, fully offline.
+  Flutter plugin for on-device LLM inference on Android using llama.cpp.
+  Simplifies model management, loading, and multi-turn chat — no cloud,
+  no API keys, fully offline.
 version: 0.1.0
-homepage: https://github.com/SxryxnshS5/1nm_LocalAI_Flutter
-repository: https://github.com/SxryxnshS5/1nm_LocalAI_Flutter
-issue_tracker: https://github.com/SxryxnshS5/1nm_LocalAI_Flutter/issues
+repository: https://github.com/SxryxnshS5/onenm_local_llm
+issue_tracker: https://github.com/SxryxnshS5/onenm_local_llm/issues
+topics:
+  - ai
+  - llm
+  - llama
+  - on-device
+  - inference
 
 environment:
   sdk: ^3.5.3
@@ -31,5 +37,5 @@ flutter:
   plugin:
     platforms:
       android:
-        package: com.example.onenm_local_llm
+        package: com.theorangeshade.onenm_local_llm
         pluginClass: OnenmLocalLlmPlugin

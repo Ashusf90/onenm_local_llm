@@ -49,7 +49,7 @@ static llama_context * ctx = nullptr;
 // ---------------------------------------------------------------------------
 extern "C"
 JNIEXPORT jboolean JNICALL
-Java_com_example_onenm_1local_1llm_OneNmNative_loadModel(
+Java_com_theorangeshade_onenm_1local_1llm_OneNmNative_loadModel(
         JNIEnv * env,
         jobject thiz,
         jstring modelPath,
@@ -120,7 +120,7 @@ Java_com_example_onenm_1local_1llm_OneNmNative_loadModel(
 // ---------------------------------------------------------------------------
 extern "C"
 JNIEXPORT jstring JNICALL
-Java_com_example_onenm_1local_1llm_OneNmNative_generate(
+Java_com_theorangeshade_onenm_1local_1llm_OneNmNative_generate(
         JNIEnv * env,
         jobject thiz,
         jstring prompt,
@@ -228,7 +228,7 @@ Java_com_example_onenm_1local_1llm_OneNmNative_generate(
 // ---------------------------------------------------------------------------
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_onenm_1local_1llm_OneNmNative_releaseModel(
+Java_com_theorangeshade_onenm_1local_1llm_OneNmNative_releaseModel(
         JNIEnv * env,
         jobject thiz) {
 
