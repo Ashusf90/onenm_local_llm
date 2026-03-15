@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 0.1.1
+
+### Fixed
+
+- Fixed ggml backend discovery failing in consumer apps outside the example project.
+  Added explicit CPU backend loading fallback when `ggml_backend_load_all_from_path()`
+  returns 0 backends (common on some Android devices due to SELinux restrictions).
+
 ## 0.1.0
 
 ### Added

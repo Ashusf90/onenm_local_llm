@@ -1,5 +1,0 @@
-# ninja log v5
-2	2400	7951416369832877	CMakeFiles/onenm_bridge.dir/onenm_bridge.cpp.o	59a00824a45156f3
-2416	2942	7951416375449810	D:/Projects/onenm_local_llm/example/build/onenm_local_llm/intermediates/cxx/Debug/3w3l5i44/obj/arm64-v8a/libonenm_bridge.so	1c7639444714aac0
-10	1839	7951511382194538	CMakeFiles/onenm_bridge.dir/onenm_bridge.cpp.o	59a00824a45156f3
-1839	2155	7951511385413706	D:/Projects/onenm_local_llm/example/build/onenm_local_llm/intermediates/cxx/Debug/3w3l5i44/obj/arm64-v8a/libonenm_bridge.so	1c7639444714aac0
