@@ -22,6 +22,7 @@
 #include <string>
 #include <vector>
 #include <android/log.h>
+#include <dlfcn.h>
 
 #include "llama.h"
 #include "ggml.h"
@@ -77,21 +78,51 @@ Java_com_theorangeshade_onenm_1local_1llm_OneNmNative_loadModel(
     // platform-specific backends (CPU, GPU, etc.) are discovered at runtime.
     LOGI("Initializing llama backend...");
     llama_log_set(llama_log_callback, nullptr);
-    ggml_backend_load_all_from_path(lib_dir);
-    LOGI("Backends loaded after path scan: %zu", ggml_backend_reg_count());
 
-    // Fallback: On some Android devices/apps, directory scanning fails silently
-    // (SELinux, path differences). Explicitly load the CPU backend by full path.
+    // Try 1: Scan the native lib directory for backend .so files.
+    ggml_backend_load_all_from_path(lib_dir);
+    LOGI("Backends after path scan: %zu", ggml_backend_reg_count());
+
+    // Try 2: System default discovery (may use different search paths).
     if (ggml_backend_reg_count() == 0) {
-        LOGI("Path scan found no backends, loading CPU backend explicitly...");
+        LOGI("Path scan found no backends, trying system default discovery...");
+        ggml_backend_load_all();
+        LOGI("Backends after system discovery: %zu", ggml_backend_reg_count());
+    }
+
+    // Try 3: Load CPU backend by just the filename. Since System.loadLibrary()
+    // in Kotlin already loaded the .so into the process, dlopen with just the
+    // filename should find it in the linker namespace.
+    if (ggml_backend_reg_count() == 0) {
+        LOGI("Trying to load CPU backend by filename only...");
+        const char * cpu_names[] = {
+            "libggml-cpu-android_armv8.2_1.so",
+            "libggml-cpu.so",
+        };
+        for (const char * name : cpu_names) {
+            ggml_backend_reg_t reg = ggml_backend_load(name);
+            if (reg) {
+                LOGI("CPU backend loaded via filename: %s", name);
+                break;
+            } else {
+                LOGI("Failed to load %s: %s", name, dlerror() ? dlerror() : "unknown");
+            }
+        }
+        LOGI("Backends after filename load: %zu", ggml_backend_reg_count());
+    }
+
+    // Try 4: Full path as last resort.
+    if (ggml_backend_reg_count() == 0) {
+        LOGI("Trying full path load...");
         std::string cpu_path = std::string(lib_dir) + "/libggml-cpu-android_armv8.2_1.so";
         ggml_backend_reg_t reg = ggml_backend_load(cpu_path.c_str());
         if (reg) {
-            LOGI("CPU backend loaded explicitly");
+            LOGI("CPU backend loaded via full path");
         } else {
-            LOGE("Failed to load CPU backend from: %s", cpu_path.c_str());
+            LOGE("All backend loading strategies failed. dlopen error: %s",
+                 dlerror() ? dlerror() : "unknown");
         }
-        LOGI("Backends loaded after explicit load: %zu", ggml_backend_reg_count());
+        LOGI("Backends after full path load: %zu", ggml_backend_reg_count());
     }
 
     llama_backend_init();

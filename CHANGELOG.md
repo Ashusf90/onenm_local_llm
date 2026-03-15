@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 0.1.2
+
+### Fixed
+
+- Fixed native backend loading failing in consumer apps on Android 6+ (API 23+).
+  Root cause: `extractNativeLibs` defaults to `false`, so `.so` files stay inside
+  the APK and are never extracted to the `nativeLibraryDir` on disk. Added
+  `android:extractNativeLibs="true"` to the plugin manifest so it merges into all
+  consumer apps automatically.
+- Improved backend loading with a 4-step fallback chain: directory scan → system
+  default discovery → filename-only load → full-path load, with `dlerror()` logging
+  for diagnostics.
+
 ## 0.1.1
 
 ### Fixed
