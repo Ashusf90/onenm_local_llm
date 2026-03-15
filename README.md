@@ -138,6 +138,29 @@ OneNm({
 })
 ```
 
+#### `onProgress` — Showing Status in Your UI
+
+The `onProgress` callback fires with human-readable status strings during download and model loading. Use it to keep your users informed:
+
+```dart
+// Status messages you'll receive (in order):
+//   "Downloading TinyLlama 1.1B Chat (~638 MB)..."
+//   "Downloading TinyLlama 1.1B Chat...\n45% (287.1 / 638.0 MB)"
+//   "Download complete"
+//   "Loading model..."
+//   "Ready"
+
+String status = 'Tap to start';
+
+final ai = OneNm(
+  model: OneNmModel.tinyllama,
+  onProgress: (msg) => setState(() => status = msg),
+);
+
+// Then in your build():
+Text(status)  // Shows live progress to the user
+```
+
 #### Methods
 
 | Method                                         | Description                                                                                                                        |
