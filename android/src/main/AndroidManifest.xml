@@ -1,4 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
   package="com.theorangeshade.onenm_local_llm">
   <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+  <!-- Force native lib extraction so ggml can discover backend .so files
+       via directory scanning at runtime (required on Android 6+ where
+       extractNativeLibs defaults to false). -->
+  <application android:extractNativeLibs="true" />
 </manifest>
