@@ -3,7 +3,7 @@ description: >-
   Flutter plugin for on-device LLM inference on Android using llama.cpp.
   Simplifies model management, loading, and multi-turn chat — no cloud,
   no API keys, fully offline.
-version: 0.1.0
+version: 0.1.1
 repository: https://github.com/SxryxnshS5/onenm_local_llm
 issue_tracker: https://github.com/SxryxnshS5/onenm_local_llm/issues
 topics:

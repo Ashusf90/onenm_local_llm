@@ -78,7 +78,22 @@ Java_com_theorangeshade_onenm_1local_1llm_OneNmNative_loadModel(
     LOGI("Initializing llama backend...");
     llama_log_set(llama_log_callback, nullptr);
     ggml_backend_load_all_from_path(lib_dir);
-    LOGI("Backends loaded: %zu", ggml_backend_reg_count());
+    LOGI("Backends loaded after path scan: %zu", ggml_backend_reg_count());
+
+    // Fallback: On some Android devices/apps, directory scanning fails silently
+    // (SELinux, path differences). Explicitly load the CPU backend by full path.
+    if (ggml_backend_reg_count() == 0) {
+        LOGI("Path scan found no backends, loading CPU backend explicitly...");
+        std::string cpu_path = std::string(lib_dir) + "/libggml-cpu-android_armv8.2_1.so";
+        ggml_backend_reg_t reg = ggml_backend_load(cpu_path.c_str());
+        if (reg) {
+            LOGI("CPU backend loaded explicitly");
+        } else {
+            LOGE("Failed to load CPU backend from: %s", cpu_path.c_str());
+        }
+        LOGI("Backends loaded after explicit load: %zu", ggml_backend_reg_count());
+    }
+
     llama_backend_init();
     env->ReleaseStringUTFChars(nativeLibDir, lib_dir);
 
