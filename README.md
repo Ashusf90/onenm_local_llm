@@ -79,7 +79,7 @@ Or add it manually to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  onenm_local_llm: ^0.1.0
+  onenm_local_llm: ^0.1.3
 ```
 
 Then run `flutter pub get`.
