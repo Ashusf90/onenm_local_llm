@@ -36,6 +36,11 @@ abstract class OnenmLocalLlmPlatform extends PlatformInterface {
     throw UnimplementedError('pingNative() has not been implemented.');
   }
 
+  /// Initialises the ggml backend. Returns `true` if at least one backend loaded.
+  Future<bool?> initBackend() {
+    throw UnimplementedError('initBackend() has not been implemented.');
+  }
+
   /// Loads a GGUF model from the given [modelPath]. Returns `true` on success.
   Future<bool?> loadModel(String modelPath) {
     throw UnimplementedError('loadModel() has not been implemented.');

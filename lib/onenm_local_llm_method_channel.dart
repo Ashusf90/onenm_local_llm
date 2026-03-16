@@ -21,6 +21,11 @@ class MethodChannelOnenmLocalLlm extends OnenmLocalLlmPlatform {
   }
 
   @override
+  Future<bool?> initBackend() async {
+    return await methodChannel.invokeMethod<bool>('initBackend');
+  }
+
+  @override
   Future<bool?> loadModel(String modelPath) async {
     return await methodChannel.invokeMethod<bool>(
       'loadModel',

@@ -61,7 +61,9 @@ _Screenshot / GIF coming soon._
 | Device                | SoC            | RAM  | Models Tested                                         | Status |
 | --------------------- | -------------- | ---- | ----------------------------------------------------- | ------ |
 | Samsung Galaxy S21 FE | Snapdragon 888 | 8 GB | TinyLlama 1.1B, Phi-2 2.7B, Qwen2.5 1.5B, Gemma 2B IT | ✅     |
-| Samsung Galaxy S9+    | Snapdragon 845 | 8 GB | TinyLlama 1.1B, Phi-2 2.7B                            | ✅     |
+| Samsung Galaxy S9+    | Snapdragon 845 | 6 GB | TinyLlama 1.1B                                        | ⚠️     |
+
+> **⚠️ Samsung Galaxy S9+ note:** Model downloads and loads correctly, but inference may crash during prompt decoding due to insufficient memory for the default KV cache allocation. A fix (configurable context size cap) is planned for a future release. Devices with Snapdragon 855 or newer should work without issues.
 
 > **🧪 Testing in progress** — We're working on testing all supported models across more devices. This table will be updated as results come in.
 

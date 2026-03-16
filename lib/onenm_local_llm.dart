@@ -111,6 +111,13 @@ class OneNm {
         'topP=${settings.topP}, maxTokens=${settings.maxTokens}, '
         'repeatPenalty=${settings.repeatPenalty}');
 
+    // Init backend early — surfaces backend issues before downloading.
+    _report('Preparing backend...');
+    final backendOk = await OnenmLocalLlmPlatform.instance.initBackend();
+    if (backendOk != true) {
+      _log('Warning: no ggml backends loaded — model loading may fail');
+    }
+
     final modelPath = await _ensureModel();
 
     _report('Loading model...');

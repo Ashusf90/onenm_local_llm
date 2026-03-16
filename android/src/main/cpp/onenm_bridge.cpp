@@ -5,10 +5,14 @@
 // =============================================================================
 // onenm_bridge.cpp — JNI bridge between Android/Kotlin and llama.cpp
 //
-// This file implements three JNI functions consumed by OneNmNative.kt:
+// This file implements four JNI functions consumed by OneNmNative.kt:
 //
-//   loadModel()    – Initialises the llama.cpp backend, loads a GGUF model,
-//                    and creates an inference context.
+//   initBackend()  – Discovers and registers ggml backends (CPU, etc.)
+//                    before model loading. Promotes dependency libs to
+//                    RTLD_GLOBAL and falls back to manual registration
+//                    when automatic discovery fails.
+//   loadModel()    – Loads a GGUF model from disk and creates an inference
+//                    context. Initialises the backend if not already done.
 //   generate()     – Tokenises a prompt, feeds it through the model, then
 //                    samples new tokens using a configurable sampler chain
 //                    (repeat-penalty → top-k → top-p → temperature → dist).
@@ -23,6 +27,8 @@
 #include <vector>
 #include <android/log.h>
 #include <dlfcn.h>
+#include <dirent.h>
+#include <cerrno>
 
 #include "llama.h"
 #include "ggml.h"
@@ -44,6 +50,102 @@ static void llama_log_callback(enum ggml_log_level level, const char * text, voi
 // Global model and context — only one model loaded at a time.
 static llama_model * model = nullptr;
 static llama_context * ctx = nullptr;
+static bool backend_initialized = false;
+
+// ---------------------------------------------------------------------------
+// initBackend — Discover and load ggml backends before model loading.
+//
+// Called early (before model download) so backend issues surface immediately.
+// Safe to call multiple times — subsequent calls are no-ops.
+// ---------------------------------------------------------------------------
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_com_theorangeshade_onenm_1local_1llm_OneNmNative_initBackend(
+        JNIEnv * env,
+        jobject thiz,
+        jstring nativeLibDir) {
+
+    if (backend_initialized) {
+        LOGI("Backend already initialized, skipping");
+        return ggml_backend_reg_count() > 0 ? JNI_TRUE : JNI_FALSE;
+    }
+
+    const char * lib_dir = env->GetStringUTFChars(nativeLibDir, nullptr);
+    LOGI("initBackend: lib dir = %s", lib_dir);
+
+    llama_log_set(llama_log_callback, nullptr);
+
+    // Promote already-loaded dependency libraries to global symbol visibility.
+    // System.loadLibrary() in Kotlin loads them with RTLD_LOCAL, so their
+    // symbols are not visible when ggml tries to dlopen the CPU backend.
+    // RTLD_NOLOAD avoids reloading — it just changes the visibility flag.
+    const char * deps[] = {
+        "libomp.so",
+        "libggml-base.so",
+        "libggml.so",
+        "libllama.so",
+    };
+    for (const char * dep : deps) {
+        void * h = dlopen(dep, RTLD_NOW | RTLD_NOLOAD | RTLD_GLOBAL);
+        if (h) {
+            LOGI("Promoted to GLOBAL: %s", dep);
+        } else {
+            LOGI("Could not promote %s: %s", dep, dlerror() ? dlerror() : "(no error)");
+        }
+    }
+
+    ggml_backend_load_all_from_path(lib_dir);
+    size_t n_backends = ggml_backend_reg_count();
+    LOGI("Backends loaded: %zu", n_backends);
+
+    // Fallback: ggml's discovery looks for ggml_backend_reg_init, but some
+    // builds export ggml_backend_cpu_reg instead. Manually dlopen + register.
+    if (n_backends == 0) {
+        std::string cpu_path = std::string(lib_dir) + "/libggml-cpu-android_armv8.2_1.so";
+        dlerror(); // clear
+        void * handle = dlopen(cpu_path.c_str(), RTLD_NOW | RTLD_GLOBAL);
+        if (handle) {
+            typedef ggml_backend_reg_t (*reg_fn_t)(void);
+            reg_fn_t reg_fn = (reg_fn_t) dlsym(handle, "ggml_backend_cpu_reg");
+            if (reg_fn) {
+                ggml_backend_reg_t reg = reg_fn();
+                if (reg) {
+                    ggml_backend_register(reg);
+                    n_backends = ggml_backend_reg_count();
+                    LOGI("Manually registered CPU backend, backends now: %zu", n_backends);
+                }
+            } else {
+                LOGE("ggml_backend_cpu_reg symbol not found");
+            }
+        } else {
+            const char * err = dlerror();
+            LOGE("dlopen failed for CPU backend: %s", err ? err : "(no error)");
+        }
+    }
+
+    if (n_backends == 0) {
+        LOGE("No ggml backends found in: %s", lib_dir);
+        DIR * dir = opendir(lib_dir);
+        if (dir) {
+            LOGE("Directory contents:");
+            struct dirent * entry;
+            while ((entry = readdir(dir)) != nullptr) {
+                if (entry->d_name[0] != '.') {
+                    LOGE("  %s", entry->d_name);
+                }
+            }
+            closedir(dir);
+        } else {
+            LOGE("Cannot open directory (errno=%d: %s)", errno, strerror(errno));
+        }
+    }
+
+    llama_backend_init();
+    backend_initialized = true;
+    env->ReleaseStringUTFChars(nativeLibDir, lib_dir);
+
+    return n_backends > 0 ? JNI_TRUE : JNI_FALSE;
+}
 
 // ---------------------------------------------------------------------------
 // loadModel  — Load a GGUF model from disk and create an inference context.
@@ -74,58 +176,17 @@ Java_com_theorangeshade_onenm_1local_1llm_OneNmNative_loadModel(
     fclose(f);
     LOGI("File size: %ld bytes", size);
 
-    // Load ggml backends from the app's native library directory so that
-    // platform-specific backends (CPU, GPU, etc.) are discovered at runtime.
-    LOGI("Initializing llama backend...");
-    llama_log_set(llama_log_callback, nullptr);
-
-    // Try 1: Scan the native lib directory for backend .so files.
-    ggml_backend_load_all_from_path(lib_dir);
-    LOGI("Backends after path scan: %zu", ggml_backend_reg_count());
-
-    // Try 2: System default discovery (may use different search paths).
-    if (ggml_backend_reg_count() == 0) {
-        LOGI("Path scan found no backends, trying system default discovery...");
-        ggml_backend_load_all();
-        LOGI("Backends after system discovery: %zu", ggml_backend_reg_count());
+    // Ensure backend is initialized (may already be done via initBackend).
+    if (!backend_initialized) {
+        LOGI("Backend not pre-initialized, initializing now...");
+        llama_log_set(llama_log_callback, nullptr);
+        ggml_backend_load_all_from_path(lib_dir);
+        LOGI("Backends loaded: %zu", ggml_backend_reg_count());
+        llama_backend_init();
+        backend_initialized = true;
+    } else {
+        LOGI("Backend already initialized (%zu backends)", ggml_backend_reg_count());
     }
-
-    // Try 3: Load CPU backend by just the filename. Since System.loadLibrary()
-    // in Kotlin already loaded the .so into the process, dlopen with just the
-    // filename should find it in the linker namespace.
-    if (ggml_backend_reg_count() == 0) {
-        LOGI("Trying to load CPU backend by filename only...");
-        const char * cpu_names[] = {
-            "libggml-cpu-android_armv8.2_1.so",
-            "libggml-cpu.so",
-        };
-        for (const char * name : cpu_names) {
-            ggml_backend_reg_t reg = ggml_backend_load(name);
-            if (reg) {
-                LOGI("CPU backend loaded via filename: %s", name);
-                break;
-            } else {
-                LOGI("Failed to load %s: %s", name, dlerror() ? dlerror() : "unknown");
-            }
-        }
-        LOGI("Backends after filename load: %zu", ggml_backend_reg_count());
-    }
-
-    // Try 4: Full path as last resort.
-    if (ggml_backend_reg_count() == 0) {
-        LOGI("Trying full path load...");
-        std::string cpu_path = std::string(lib_dir) + "/libggml-cpu-android_armv8.2_1.so";
-        ggml_backend_reg_t reg = ggml_backend_load(cpu_path.c_str());
-        if (reg) {
-            LOGI("CPU backend loaded via full path");
-        } else {
-            LOGE("All backend loading strategies failed. dlopen error: %s",
-                 dlerror() ? dlerror() : "unknown");
-        }
-        LOGI("Backends after full path load: %zu", ggml_backend_reg_count());
-    }
-
-    llama_backend_init();
     env->ReleaseStringUTFChars(nativeLibDir, lib_dir);
 
     LOGI("Loading model from file...");
@@ -289,4 +350,5 @@ Java_com_theorangeshade_onenm_1local_1llm_OneNmNative_releaseModel(
     }
 
     llama_backend_free();
+    backend_initialized = false;
 }

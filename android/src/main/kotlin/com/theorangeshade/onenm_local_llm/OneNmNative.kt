@@ -13,6 +13,16 @@ package com.theorangeshade.onenm_local_llm
  */
 class OneNmNative {
     /**
+     * Initialises the ggml backend (CPU, etc.) from shared libraries in [nativeLibDir].
+     *
+     * Safe to call multiple times — subsequent calls are no-ops.
+     * Call this early (before model download) so backend issues surface immediately.
+     *
+     * @return `true` if at least one backend was discovered.
+     */
+    external fun initBackend(nativeLibDir: String): Boolean
+
+    /**
      * Loads a GGUF model from [modelPath].
      *
      * [nativeLibDir] is passed so the C++ layer can discover additional
