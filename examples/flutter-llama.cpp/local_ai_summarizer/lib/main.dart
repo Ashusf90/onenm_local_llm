@@ -15,3 +15,12 @@ TextField(
     contentPadding: EdgeInsets.all(12),
   ),
 )
+
+bool isLoading = false;
+onPressed: () async {
+  setState(() => isLoading = true);
+
+  await summarizeText(); // existing function
+
+  setState(() => isLoading = false);
+}
