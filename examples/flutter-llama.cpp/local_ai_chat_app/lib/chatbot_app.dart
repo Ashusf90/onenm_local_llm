@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_const_constructors, library_private_types_in_public_api, use_key_in_widget_constructors
+
 import 'package:flutter/material.dart';
 import 'package:onenm_local_llm/onenm_local_llm.dart';
 
@@ -21,7 +23,7 @@ class _ChatbotAppState extends State<ChatbotApp> {
 
   Future<void> _initializeModel() async {
     _ai = OneNm(
-      model: OneNmModel.llama32,
+      model: OneNmModel.qwen25,
       onProgress: (status) {
         setState(() {
           _status = status;
